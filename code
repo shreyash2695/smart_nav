@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NavAssist Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #000; color: #fff; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        .pulse-ring { position: absolute; width: 100px; height: 100px; border: 4px solid #3b82f6; border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(4); opacity: 0; } }
+        #setup-screen { position: fixed; inset: 0; background: #000; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen">
+
+    <div id="setup-screen">
+        <h1 class="text-3xl font-bold mb-8 text-center px-6">NavAssist Setup</h1>
+        <button id="activate-btn" class="bg-red-600 text-white font-extrabold py-8 px-12 rounded-full text-2xl shadow-2xl border-4 border-white">
+            ALLOW SENSORS
+        </button>
+        <p class="mt-8 text-gray-400 text-center px-10">Tap the red button to enable voice and compass.</p>
+    </div>
+
+    <div id="visual-feedback" class="hidden pulse-ring"></div>
+    <main class="z-10 text-center p-8 pointer-events-none">
+        <div class="w-32 h-32 bg-gray-900 rounded-full flex items-center justify-center mx-auto border-4 border-blue-500 mb-10">
+            <span id="status-icon" class="text-5xl">🎤</span>
+        </div>
+        <h1 class="text-5xl font-extrabold mb-4">NavAssist</h1>
+        <p id="status-text" class="text-2xl text-blue-400 font-medium">Ready: Tap Screen</p>
+        <p id="loc-display" class="mt-4 text-gray-500">Location: Main Lobby</p>
+    </main>
+
+    <script>
+        // --- DATA & STATE ---
+        const mapData = {
+            'lobby': { name: 'Main Lobby', angle: 0 },
+            'cse': { name: 'C S E Lab', angle: 270 },
+            'library': { name: 'Library', angle: 90 },
+            'canteen': { name: 'Canteen', angle: 180 },
+            'exit': { name: 'Main Exit', angle: 0 }
+        };
+
+        let userHeading = 0;
+        let currentPos = 'lobby'; 
+        const synth = window.speechSynthesis;
+
+        function speak(text) {
+            synth.cancel();
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.rate = 1.0;
+            synth.speak(msg);
+        }
+
+        function vibrate(ms) {
+            if (navigator.vibrate) navigator.vibrate(ms);
+        }
+
+        // --- SENSORS ---
+        window.addEventListener('deviceorientationabsolute', (e) => {
+            if (e.alpha !== null) userHeading = e.alpha;
+        }, true);
+
+        // --- SPEECH RECOGNITION ---
+        const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new Speech();
+        recognition.continuous = false;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+            vibrate(100);
+            document.getElementById('visual-feedback').classList.remove('hidden');
+            document.getElementById('status-text').innerText = "Listening...";
+        };
+
+        recognition.onresult = (event) => {
+            const input = event.results[0][0].transcript.toLowerCase();
+            let target = null;
+
+            // 1. Check for "Where am I"
+            if (input.includes("where") || input.includes("location") || input.includes("status")) {
+                speak(`You are at the ${mapData[currentPos].name}. Facing ${Math.round(userHeading)} degrees.`);
+                return;
+            }
+
+            // 2. Check for "I am in [Room]" (Manual Location Update)
+            if (input.includes("i am in") || input.includes("start at")) {
+                if (input.includes("library")) currentPos = 'library';
+                else if (input.includes("canteen")) currentPos = 'canteen';
+                else if (input.includes("cse") || input.includes("lab")) currentPos = 'cse';
+                else if (input.includes("lobby")) currentPos = 'lobby';
+                
+                document.getElementById('loc-display').innerText = "Location: " + mapData[currentPos].name;
+                speak(`Starting point updated to ${mapData[currentPos].name}.`);
+                return;
+            }
+
+            // 3. Navigation Commands
+            if (input.includes("cse") || input.includes("lab")) target = 'cse';
+            else if (input.includes("lib")) target = 'library';
+            else if (input.includes("can")) target = 'canteen';
+            else if (input.includes("exit") || input.includes("out")) target = 'exit';
+
+            if (target) {
+                let targetAngle = mapData[target].angle;
+                let diff = (targetAngle - userHeading + 360) % 360;
+                if (diff > 180) diff -= 360;
+                
+                let direction = diff > 0 ? "right" : "left";
+                speak(`Target ${mapData[target].name}. Turn ${direction} ${Math.abs(Math.round(diff))} degrees.`);
+                vibrate([100, 50, 100]);
+            } else {
+                speak("I heard " + input + ". Please say a room name.");
+            }
+        };
+
+        recognition.onend = () => {
+            document.getElementById('visual-feedback').classList.add('hidden');
+            document.getElementById('status-text').innerText = "Ready: Tap Screen";
+        };
+
+        // --- BUTTONS & TOUCH ---
+        document.getElementById('activate-btn').onclick = function() {
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission();
+            }
+            document.getElementById('setup-screen').style.display = 'none';
+            vibrate(200);
+            speak("System active. Tap anywhere and say a room name.");
+        };
+
+        document.body.addEventListener('click', () => {
+            if (!synth.speaking) {
+                recognition.start();
+            }
+        });
+    </script>
+</body>
+</html>
