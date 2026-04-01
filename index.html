@@ -41,9 +41,9 @@
 
         .rfid-btn {
             background: #1f2937;
-            padding: 10px 15px;
-            margin: 5px;
+            padding: 12px 16px;
             border-radius: 10px;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -59,12 +59,9 @@
     </button>
 </div>
 
-<!-- RFID SIMULATION BUTTONS -->
+<!-- RFID BUTTON (ONLY ONE) -->
 <div class="absolute top-5 left-5 z-50">
-    <button class="rfid-btn" onclick="updateLocation('lobby')">Lobby</button>
-    <button class="rfid-btn" onclick="updateLocation('library')">Library</button>
-    <button class="rfid-btn" onclick="updateLocation('cse')">CSE Lab</button>
-    <button class="rfid-btn" onclick="updateLocation('canteen')">Canteen</button>
+    <button class="rfid-btn" onclick="scanRFID()">Scan RFID (Lobby)</button>
 </div>
 
 <!-- VISUAL FEEDBACK -->
@@ -73,25 +70,23 @@
 <!-- MAIN UI -->
 <main class="z-10 text-center p-8">
     <div class="w-32 h-32 bg-gray-900 rounded-full flex items-center justify-center mx-auto border-4 border-blue-500 mb-10">
-        <span id="status-icon" class="text-5xl">🎤</span>
+        <span class="text-5xl">🎤</span>
     </div>
 
     <h1 class="text-5xl font-extrabold mb-4">NavAssist</h1>
-    <p id="status-text" class="text-2xl text-blue-400">Tap Screen & Speak</p>
-    <p id="loc-display" class="mt-4 text-gray-400">Location: Lobby</p>
+    <p id="status-text" class="text-2xl text-blue-400">Scan RFID to Start</p>
+    <p id="loc-display" class="mt-4 text-gray-400">Location: Not detected</p>
 </main>
 
 <script>
-    // ---------------- DATA ----------------
+    // ---------------- MAP DATA ----------------
     const mapData = {
         'lobby': { name: 'Main Lobby', angle: 0 },
-        'cse': { name: 'CSE Lab', angle: 270 },
         'library': { name: 'Library', angle: 90 },
-        'canteen': { name: 'Canteen', angle: 180 },
-        'exit': { name: 'Main Exit', angle: 0 }
+        'cse': { name: 'CSE Lab', angle: 270 }
     };
 
-    let currentPos = 'lobby';
+    let currentPos = null;
     let userHeading = 0;
 
     const synth = window.speechSynthesis;
@@ -102,16 +97,17 @@
         synth.speak(msg);
     }
 
-    // ---------------- UPDATE LOCATION (RFID SIMULATION) ----------------
-    function updateLocation(newLoc) {
-        if (mapData[newLoc]) {
-            currentPos = newLoc;
+    // ---------------- RFID SCAN ----------------
+    function scanRFID() {
+        currentPos = 'lobby';
 
-            document.getElementById('loc-display').innerText =
-                "Location: " + mapData[currentPos].name;
+        document.getElementById('loc-display').innerText =
+            "Location: " + mapData[currentPos].name;
 
-            speak(`Location updated to ${mapData[currentPos].name}`);
-        }
+        document.getElementById('status-text').innerText =
+            "Tap Screen & Speak Destination";
+
+        speak("RFID detected. You are at Main Lobby");
     }
 
     // ---------------- COMPASS ----------------
@@ -121,7 +117,7 @@
         }
     }, true);
 
-    // ---------------- SPEECH RECOGNITION ----------------
+    // ---------------- SPEECH ----------------
     const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new Speech();
     recognition.lang = 'en-US';
@@ -140,6 +136,12 @@
         const input = event.results[0][0].transcript.toLowerCase();
         let target = null;
 
+        // Check location first
+        if (!currentPos) {
+            speak("Please scan RFID to detect your location");
+            return;
+        }
+
         // Where am I
         if (input.includes("where")) {
             speak(`You are at ${mapData[currentPos].name}`);
@@ -147,10 +149,8 @@
         }
 
         // Destination detection
-        if (input.includes("cse")) target = 'cse';
-        else if (input.includes("library")) target = 'library';
-        else if (input.includes("canteen")) target = 'canteen';
-        else if (input.includes("exit")) target = 'exit';
+        if (input.includes("library")) target = 'library';
+        else if (input.includes("cse")) target = 'cse';
 
         if (target) {
             navigateTo(target);
@@ -159,7 +159,7 @@
         }
     };
 
-    // ---------------- NAVIGATION LOGIC ----------------
+    // ---------------- NAVIGATION ----------------
     function navigateTo(target) {
         let targetAngle = mapData[target].angle;
         let diff = (targetAngle - userHeading + 360) % 360;
@@ -175,7 +175,7 @@
         }
     }
 
-    // ---------------- USER ACTION ----------------
+    // ---------------- USER INTERACTION ----------------
     document.body.addEventListener('click', () => {
         if (!synth.speaking) {
             recognition.start();
@@ -184,7 +184,7 @@
 
     document.getElementById('activate-btn').onclick = () => {
         document.getElementById('setup-screen').style.display = 'none';
-        speak("System activated");
+        speak("System activated. Please scan RFID.");
     };
 </script>
 
