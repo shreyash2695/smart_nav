@@ -1,192 +1,94 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NavAssist Pro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Smart Navigation System</title>
 
     <style>
         body {
-            background-color: #000;
-            color: #fff;
-            font-family: sans-serif;
-            overflow: hidden;
+            font-family: Arial;
+            text-align: center;
+            background-color: #f5f5f5;
+            margin-top: 50px;
         }
 
-        .pulse-ring {
-            position: absolute;
-            width: 100px;
-            height: 100px;
-            border: 4px solid #3b82f6;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
+        h1 {
+            color: #333;
         }
 
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(4); opacity: 0; }
-        }
-
-        #setup-screen {
-            position: fixed;
-            inset: 0;
-            background: #000;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .rfid-btn {
-            background: #1f2937;
-            padding: 12px 16px;
+        button {
+            padding: 15px 25px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
             border-radius: 10px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #status {
+            margin-top: 30px;
+            font-size: 22px;
+            color: blue;
+        }
+
+        #direction {
+            margin-top: 20px;
+            font-size: 24px;
             font-weight: bold;
+            color: darkred;
         }
     </style>
 </head>
 
-<body class="flex flex-col items-center justify-center min-h-screen">
+<body>
 
-<!-- SETUP SCREEN -->
-<div id="setup-screen">
-    <h1 class="text-3xl font-bold mb-8 text-center px-6">NavAssist Setup</h1>
-    <button id="activate-btn"
-        class="bg-red-600 text-white font-extrabold py-8 px-12 rounded-full text-2xl shadow-2xl border-4 border-white">
-        START SYSTEM
-    </button>
-</div>
+    <h1>Smart Navigation System</h1>
 
-<!-- RFID BUTTON (ONLY ONE) -->
-<div class="absolute top-5 left-5 z-50">
-    <button class="rfid-btn" onclick="scanRFID()">Scan RFID (Lobby)</button>
-</div>
+    <button onclick="scanRFID()">Scan RFID</button>
 
-<!-- VISUAL FEEDBACK -->
-<div id="visual-feedback" class="hidden pulse-ring"></div>
+    <div id="status"></div>
+    <div id="direction"></div>
 
-<!-- MAIN UI -->
-<main class="z-10 text-center p-8">
-    <div class="w-32 h-32 bg-gray-900 rounded-full flex items-center justify-center mx-auto border-4 border-blue-500 mb-10">
-        <span class="text-5xl">🎤</span>
-    </div>
+    <script>
 
-    <h1 class="text-5xl font-extrabold mb-4">NavAssist</h1>
-    <p id="status-text" class="text-2xl text-blue-400">Scan RFID to Start</p>
-    <p id="loc-display" class="mt-4 text-gray-400">Location: Not detected</p>
-</main>
-
-<script>
-    // ---------------- MAP DATA ----------------
-    const mapData = {
-        'lobby': { name: 'Main Lobby', angle: 0 },
-        'library': { name: 'Library', angle: 90 },
-        'cse': { name: 'CSE Lab', angle: 270 }
-    };
-
-    let currentPos = null;
-    let userHeading = 0;
-
-    const synth = window.speechSynthesis;
-
-    function speak(text) {
-        synth.cancel();
-        const msg = new SpeechSynthesisUtterance(text);
-        synth.speak(msg);
-    }
-
-    // ---------------- RFID SCAN ----------------
-    function scanRFID() {
-        currentPos = 'lobby';
-
-        document.getElementById('loc-display').innerText =
-            "Location: " + mapData[currentPos].name;
-
-        document.getElementById('status-text').innerText =
-            "Tap Screen & Speak Destination";
-
-        speak("RFID detected. You are at Main Lobby");
-    }
-
-    // ---------------- COMPASS ----------------
-    window.addEventListener('deviceorientationabsolute', (e) => {
-        if (e.alpha !== null) {
-            userHeading = e.alpha;
-        }
-    }, true);
-
-    // ---------------- SPEECH ----------------
-    const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new Speech();
-    recognition.lang = 'en-US';
-
-    recognition.onstart = () => {
-        document.getElementById('visual-feedback').classList.remove('hidden');
-        document.getElementById('status-text').innerText = "Listening...";
-    };
-
-    recognition.onend = () => {
-        document.getElementById('visual-feedback').classList.add('hidden');
-        document.getElementById('status-text').innerText = "Tap Screen & Speak";
-    };
-
-    recognition.onresult = (event) => {
-        const input = event.results[0][0].transcript.toLowerCase();
-        let target = null;
-
-        // Check location first
-        if (!currentPos) {
-            speak("Please scan RFID to detect your location");
-            return;
+        function speak(text) {
+            let speech = new SpeechSynthesisUtterance(text);
+            speech.lang = "en-US";
+            window.speechSynthesis.speak(speech);
         }
 
-        // Where am I
-        if (input.includes("where")) {
-            speak(`You are at ${mapData[currentPos].name}`);
-            return;
+        function scanRFID() {
+
+            document.getElementById("status").innerText = "RFID Detected ✔";
+            speak("RFID detected");
+
+            // Step 1
+            setTimeout(() => {
+                let msg1 = "Go straight";
+                document.getElementById("direction").innerText = msg1;
+                speak(msg1);
+            }, 1000);
+
+            // Step 2
+            setTimeout(() => {
+                let msg2 = "Keep walking forward";
+                document.getElementById("direction").innerText = msg2;
+                speak(msg2);
+            }, 3000);
+
+            // Final Step
+            setTimeout(() => {
+                let msg3 = "Destination is on the left. Room 309";
+                document.getElementById("direction").innerText = msg3;
+                speak(msg3);
+            }, 5000);
         }
 
-        // Destination detection
-        if (input.includes("library")) target = 'library';
-        else if (input.includes("cse")) target = 'cse';
-
-        if (target) {
-            navigateTo(target);
-        } else {
-            speak("Please say a valid destination");
-        }
-    };
-
-    // ---------------- NAVIGATION ----------------
-    function navigateTo(target) {
-        let targetAngle = mapData[target].angle;
-        let diff = (targetAngle - userHeading + 360) % 360;
-
-        if (diff > 180) diff -= 360;
-
-        if (Math.abs(diff) < 15) {
-            speak(`Go straight to ${mapData[target].name}`);
-        } else if (diff > 0) {
-            speak(`Turn right to reach ${mapData[target].name}`);
-        } else {
-            speak(`Turn left to reach ${mapData[target].name}`);
-        }
-    }
-
-    // ---------------- USER INTERACTION ----------------
-    document.body.addEventListener('click', () => {
-        if (!synth.speaking) {
-            recognition.start();
-        }
-    });
-
-    document.getElementById('activate-btn').onclick = () => {
-        document.getElementById('setup-screen').style.display = 'none';
-        speak("System activated. Please scan RFID.");
-    };
-</script>
+    </script>
 
 </body>
 </html>
