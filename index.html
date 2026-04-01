@@ -163,26 +163,39 @@
     // ---------------- NAVIGATION ----------------
     function navigateTo(target) {
 
-        // SPECIAL: Room 309 fixed output
-        if (target === 'room309') {
-            speak("Room 309 is on the left");
-            return;
-        }
+    // SPECIAL: Room 309 guided flow
+    if (target === 'room309') {
 
-        let targetAngle = mapData[target].angle;
-        let diff = (targetAngle - userHeading + 360) % 360;
+        // Step 1: Turn left
+        speak("Turn left");
 
-        if (diff > 180) diff -= 360;
+        // Step 2: Walk (after 2 seconds)
+        setTimeout(() => {
+            speak("Walk");
+        }, 2000);
 
-        if (Math.abs(diff) < 15) {
-            speak(`Go straight to ${mapData[target].name}`);
-        } else if (diff > 0) {
-            speak(`Turn right to reach ${mapData[target].name}`);
-        } else {
-            speak(`Turn left to reach ${mapData[target].name}`);
-        }
+        // Step 3: Destination (after 5 seconds)
+        setTimeout(() => {
+            speak("Your destination is on the left");
+        }, 5000);
+
+        return;
     }
 
+    // -------- NORMAL NAVIGATION --------
+    let targetAngle = mapData[target].angle;
+    let diff = (targetAngle - userHeading + 360) % 360;
+
+    if (diff > 180) diff -= 360;
+
+    if (Math.abs(diff) < 15) {
+        speak(`Go straight to ${mapData[target].name}`);
+    } else if (diff > 0) {
+        speak(`Turn right to reach ${mapData[target].name}`);
+    } else {
+        speak(`Turn left to reach ${mapData[target].name}`);
+    }
+}
     // ---------------- USER ACTION ----------------
     document.body.addEventListener('click', () => {
         if (!synth.speaking) {
